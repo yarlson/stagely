@@ -3,7 +3,7 @@
 ## Overview
 
 Stagely uses PostgreSQL as its primary database. The schema is designed for:
-- Hierarchical multi-tenancy (Teams → Projects → Environments)
+- Hierarchical multi-tenancy (Teams → Projects → Stagelets)
 - Tracking ephemeral infrastructure lifecycle
 - Audit logging
 - Encrypted secret storage
@@ -31,7 +31,7 @@ Stagely uses PostgreSQL as its primary database. The schema is designed for:
        │ 1:N
        ↓
 ┌──────────────┐       ┌─────────────┐
-│ environments │───────│  secrets    │
+│ stagelets │───────│  secrets    │
 └──────┬───────┘  N:1  └─────────────┘
        │
        │ 1:N
@@ -64,7 +64,7 @@ CREATE TABLE teams (
     billing_plan VARCHAR(50) DEFAULT 'free',
 
     -- Limits
-    max_concurrent_environments INT DEFAULT 5,
+    max_concurrent_stagelets INT DEFAULT 5,
     max_concurrent_builds INT DEFAULT 10,
 
     -- Metadata
@@ -81,7 +81,7 @@ CREATE INDEX idx_teams_deleted ON teams(deleted_at) WHERE deleted_at IS NULL;
 
 COMMENT ON TABLE teams IS 'Top-level tenant. Users belong to teams.';
 COMMENT ON COLUMN teams.slug IS 'URL-safe identifier (e.g., "acme-corp")';
-COMMENT ON COLUMN teams.max_concurrent_environments IS 'Quota: max active preview environments';
+COMMENT ON COLUMN teams.max_concurrent_stagelets IS 'Quota: max active preview stagelets';
 ```
 
 ### `users`
@@ -140,7 +140,7 @@ COMMENT ON TABLE team_members IS 'User membership in teams with role-based acces
 **Roles:**
 - `owner`: Full control, can delete team
 - `admin`: Manage projects, billing, members
-- `member`: Create environments, view secrets
+- `member`: Create stagelets, view secrets
 - `viewer`: Read-only access
 
 ### `projects`
@@ -182,7 +182,7 @@ CREATE INDEX idx_projects_team ON projects(team_id);
 CREATE INDEX idx_projects_slug ON projects(team_id, slug);
 CREATE INDEX idx_projects_repo ON projects(repo_url);
 
-COMMENT ON TABLE projects IS 'Git repositories configured for preview environments';
+COMMENT ON TABLE projects IS 'Git repositories configured for preview stagelets';
 COMMENT ON COLUMN projects.config IS 'Project-specific settings (JSON)';
 ```
 
@@ -234,12 +234,12 @@ COMMENT ON COLUMN cloud_providers.encrypted_credentials IS 'AES-256-GCM encrypte
 }
 ```
 
-### `environments`
+### `stagelets`
 
-An environment is a deployed instance of a PR.
+An stagelet is a deployed instance of a PR.
 
 ```sql
-CREATE TABLE environments (
+CREATE TABLE stagelets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
 
@@ -272,25 +272,25 @@ CREATE TABLE environments (
     CONSTRAINT valid_status CHECK (status IN ('pending', 'building', 'deploying', 'ready', 'failed', 'terminated'))
 );
 
-CREATE INDEX idx_environments_project ON environments(project_id);
-CREATE INDEX idx_environments_pr ON environments(project_id, pr_number);
-CREATE INDEX idx_environments_hash ON environments(subdomain_hash);
-CREATE INDEX idx_environments_status ON environments(status);
-CREATE INDEX idx_environments_heartbeat ON environments(last_heartbeat_at) WHERE status = 'ready';
+CREATE INDEX idx_stagelets_project ON stagelets(project_id);
+CREATE INDEX idx_stagelets_pr ON stagelets(project_id, pr_number);
+CREATE INDEX idx_stagelets_hash ON stagelets(subdomain_hash);
+CREATE INDEX idx_stagelets_status ON stagelets(status);
+CREATE INDEX idx_stagelets_heartbeat ON stagelets(last_heartbeat_at) WHERE status = 'ready';
 
-COMMENT ON TABLE environments IS 'Ephemeral preview environments (one per PR)';
-COMMENT ON COLUMN environments.subdomain_hash IS 'NanoID for URL: https://{hash}.stagely.dev';
-COMMENT ON COLUMN environments.last_heartbeat_at IS 'Agent heartbeat timestamp (used by Reaper)';
+COMMENT ON TABLE stagelets IS 'Ephemeral preview stagelets (one per PR)';
+COMMENT ON COLUMN stagelets.subdomain_hash IS 'NanoID for URL: https://{hash}.stagely.dev';
+COMMENT ON COLUMN stagelets.last_heartbeat_at IS 'Agent heartbeat timestamp (used by Reaper)';
 ```
 
 ### `workflow_runs`
 
-A workflow run represents the build → deploy → test pipeline for an environment.
+A workflow run represents the build → deploy → test pipeline for an stagelet.
 
 ```sql
 CREATE TABLE workflow_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    environment_id UUID NOT NULL REFERENCES environments(id) ON DELETE CASCADE,
+    stagelet_id UUID NOT NULL REFERENCES stagelets(id) ON DELETE CASCADE,
 
     -- Trigger
     trigger VARCHAR(50) NOT NULL,
@@ -316,7 +316,7 @@ CREATE TABLE workflow_runs (
     CONSTRAINT valid_result CHECK (result IN ('success', 'failure', 'cancelled') OR result IS NULL)
 );
 
-CREATE INDEX idx_workflow_runs_env ON workflow_runs(environment_id);
+CREATE INDEX idx_workflow_runs_env ON workflow_runs(stagelet_id);
 CREATE INDEX idx_workflow_runs_status ON workflow_runs(status);
 CREATE INDEX idx_workflow_runs_created ON workflow_runs(created_at DESC);
 
@@ -397,7 +397,7 @@ COMMENT ON TABLE build_logs IS 'Real-time build output (streamed via Agent WebSo
 
 ### `secrets`
 
-Encrypted environment variables and files.
+Encrypted stagelet variables and files.
 
 ```sql
 CREATE TABLE secrets (
@@ -429,7 +429,7 @@ CREATE TABLE secrets (
 CREATE INDEX idx_secrets_project ON secrets(project_id);
 CREATE INDEX idx_secrets_project_scope ON secrets(project_id, scope);
 
-COMMENT ON TABLE secrets IS 'Encrypted secrets injected into environments';
+COMMENT ON TABLE secrets IS 'Encrypted secrets injected into stagelets';
 COMMENT ON COLUMN secrets.scope IS '"global" or service name (e.g., "backend", "frontend")';
 COMMENT ON COLUMN secrets.encrypted_value IS 'AES-256-GCM encrypted';
 ```
@@ -462,7 +462,7 @@ CREATE TABLE audit_logs (
     -- When
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT valid_resource_type CHECK (resource_type IN ('team', 'project', 'environment', 'secret', 'user', 'workflow_run'))
+    CONSTRAINT valid_resource_type CHECK (resource_type IN ('team', 'project', 'stagelet', 'secret', 'user', 'workflow_run'))
 );
 
 CREATE INDEX idx_audit_logs_actor ON audit_logs(actor_id);
@@ -478,8 +478,8 @@ COMMENT ON TABLE audit_logs IS 'Audit trail for all sensitive operations';
 - `secret.updated`
 - `secret.deleted`
 - `secret.accessed`
-- `environment.deployed`
-- `environment.terminated`
+- `stagelet.deployed`
+- `stagelet.terminated`
 - `user.added_to_team`
 
 ### `agent_connections`
@@ -489,7 +489,7 @@ Track active Agent WebSocket connections.
 ```sql
 CREATE TABLE agent_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    environment_id UUID NOT NULL REFERENCES environments(id) ON DELETE CASCADE,
+    stagelet_id UUID NOT NULL REFERENCES stagelets(id) ON DELETE CASCADE,
 
     agent_id VARCHAR(100) NOT NULL UNIQUE,
     token_hash VARCHAR(64) NOT NULL,
@@ -509,7 +509,7 @@ CREATE TABLE agent_connections (
     CONSTRAINT valid_status CHECK (status IN ('connected', 'disconnected'))
 );
 
-CREATE INDEX idx_agent_connections_env ON agent_connections(environment_id);
+CREATE INDEX idx_agent_connections_env ON agent_connections(stagelet_id);
 CREATE INDEX idx_agent_connections_last_seen ON agent_connections(last_seen_at) WHERE status = 'connected';
 
 COMMENT ON TABLE agent_connections IS 'Active Agent WebSocket connections (in-memory state persisted)';
@@ -517,12 +517,12 @@ COMMENT ON TABLE agent_connections IS 'Active Agent WebSocket connections (in-me
 
 ## Views
 
-### `active_environments`
+### `active_stagelets`
 
-Convenient view for querying running environments.
+Convenient view for querying running stagelets.
 
 ```sql
-CREATE VIEW active_environments AS
+CREATE VIEW active_stagelets AS
 SELECT
     e.id,
     e.subdomain_hash,
@@ -534,21 +534,21 @@ SELECT
     e.last_heartbeat_at,
     EXTRACT(EPOCH FROM (NOW() - e.created_at)) / 3600 AS age_hours,
     e.estimated_cost_usd
-FROM environments e
+FROM stagelets e
 JOIN projects p ON e.project_id = p.id
 JOIN teams t ON p.team_id = t.id
 WHERE e.status IN ('deploying', 'ready')
   AND e.terminated_at IS NULL;
 
-COMMENT ON VIEW active_environments IS 'All currently active preview environments';
+COMMENT ON VIEW active_stagelets IS 'All currently active preview stagelets';
 ```
 
-### `stale_environments`
+### `stale_stagelets`
 
-Environments that need cleanup (Reaper target).
+Stagelets that need cleanup (Reaper target).
 
 ```sql
-CREATE VIEW stale_environments AS
+CREATE VIEW stale_stagelets AS
 SELECT
     e.id,
     e.subdomain_hash,
@@ -559,7 +559,7 @@ SELECT
         WHEN e.last_heartbeat_at < NOW() - INTERVAL '15 minutes' THEN 'agent_dead'
         WHEN e.created_at < NOW() - INTERVAL '24 hours' THEN 'ttl_expired'
     END AS stale_reason
-FROM environments e
+FROM stagelets e
 JOIN projects p ON e.project_id = p.id
 WHERE e.status = 'ready'
   AND (
@@ -567,7 +567,7 @@ WHERE e.status = 'ready'
     OR e.created_at < NOW() - INTERVAL '24 hours'
   );
 
-COMMENT ON VIEW stale_environments IS 'Environments eligible for termination by Reaper';
+COMMENT ON VIEW stale_stagelets IS 'Stagelets eligible for termination by Reaper';
 ```
 
 ## Functions
@@ -600,7 +600,7 @@ CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects
 
 ### `generate_subdomain_hash()`
 
-Generate unique NanoID for environment URLs.
+Generate unique NanoID for stagelet URLs.
 
 ```sql
 CREATE OR REPLACE FUNCTION generate_subdomain_hash()
@@ -626,7 +626,7 @@ DECLARE
 BEGIN
     LOOP
         new_hash := generate_subdomain_hash();
-        SELECT EXISTS(SELECT 1 FROM environments WHERE subdomain_hash = new_hash) INTO hash_exists;
+        SELECT EXISTS(SELECT 1 FROM stagelets WHERE subdomain_hash = new_hash) INTO hash_exists;
         EXIT WHEN NOT hash_exists;
     END LOOP;
     RETURN new_hash;
@@ -639,16 +639,16 @@ $$ LANGUAGE plpgsql;
 ### Composite Indexes
 
 ```sql
--- Fast lookup: "Find active environments for this project"
-CREATE INDEX idx_environments_project_status ON environments(project_id, status)
+-- Fast lookup: "Find active stagelets for this project"
+CREATE INDEX idx_stagelets_project_status ON stagelets(project_id, status)
 WHERE status IN ('ready', 'deploying');
 
 -- Fast lookup: "Find all build jobs waiting in queue"
 CREATE INDEX idx_build_jobs_status_queued ON build_jobs(status, queued_at)
 WHERE status = 'queued';
 
--- Fast lookup: "Find environments by PR number"
-CREATE INDEX idx_environments_pr_lookup ON environments(project_id, pr_number)
+-- Fast lookup: "Find stagelets by PR number"
+CREATE INDEX idx_stagelets_pr_lookup ON stagelets(project_id, pr_number)
 WHERE terminated_at IS NULL;
 ```
 
@@ -659,7 +659,7 @@ WHERE terminated_at IS NULL;
 CREATE INDEX idx_teams_active ON teams(id) WHERE deleted_at IS NULL;
 
 -- Only index connected agents
-CREATE INDEX idx_agents_active ON agent_connections(environment_id, last_seen_at)
+CREATE INDEX idx_agents_active ON agent_connections(stagelet_id, last_seen_at)
 WHERE status = 'connected';
 ```
 
@@ -759,9 +759,9 @@ default_pool_size = 25
 
 ### Key Metrics
 
-- Active environments count: `SELECT COUNT(*) FROM active_environments;`
+- Active stagelets count: `SELECT COUNT(*) FROM active_stagelets;`
 - Pending build jobs: `SELECT COUNT(*) FROM build_jobs WHERE status = 'queued';`
-- Stale environments: `SELECT COUNT(*) FROM stale_environments;`
+- Stale stagelets: `SELECT COUNT(*) FROM stale_stagelets;`
 - Database size: `SELECT pg_size_pretty(pg_database_size('stagely'));`
 
 ### Slow Queries
@@ -788,11 +788,11 @@ LIMIT 10;
 
 ```sql
 -- Safe: Add nullable column with default
-ALTER TABLE environments
+ALTER TABLE stagelets
 ADD COLUMN display_name VARCHAR(255) DEFAULT NULL;
 
 -- Backfill (optional)
-UPDATE environments SET display_name = branch_name WHERE display_name IS NULL;
+UPDATE stagelets SET display_name = branch_name WHERE display_name IS NULL;
 ```
 
 ### Removing a Column
@@ -800,7 +800,7 @@ UPDATE environments SET display_name = branch_name WHERE display_name IS NULL;
 ```sql
 -- Step 1: Deploy code that ignores the column
 -- Step 2: Remove column (safe after deployment)
-ALTER TABLE environments DROP COLUMN old_column;
+ALTER TABLE stagelets DROP COLUMN old_column;
 ```
 
 ## Testing
@@ -839,8 +839,8 @@ For each table, document:
 Use PostgreSQL `COMMENT`:
 
 ```sql
-COMMENT ON TABLE environments IS 'Ephemeral preview environments';
-COMMENT ON COLUMN environments.subdomain_hash IS 'NanoID for URL routing';
+COMMENT ON TABLE stagelets IS 'Ephemeral preview stagelets';
+COMMENT ON COLUMN stagelets.subdomain_hash IS 'NanoID for URL routing';
 ```
 
 This documentation is queryable:

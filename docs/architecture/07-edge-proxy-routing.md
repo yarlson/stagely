@@ -204,7 +204,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     }
 
     if target.Status != "ready" {
-        p.Serve503(w, r, "Environment not ready")
+        p.Serve503(w, r, "Stagelet not ready")
         return
     }
 
@@ -241,7 +241,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   "status": "ready",
   "project": "api-backend",
   "team": "acme-corp",
-  "environment_id": "env_xk82j9s7"
+  "stagelet_id": "env_xk82j9s7"
 }
 ```
 
@@ -280,7 +280,7 @@ DEL route:abc123
 
 ## Error Handling
 
-### 404: Environment Not Found
+### 404: Stagelet Not Found
 
 **Scenario:** Redis returns `nil` (key doesn't exist)
 
@@ -292,10 +292,10 @@ Content-Type: text/html
 
 <!DOCTYPE html>
 <html>
-<head><title>Environment Not Found</title></head>
+<head><title>Stagelet Not Found</title></head>
 <body>
-  <h1>404 - Environment Not Found</h1>
-  <p>The preview environment <code>abc123</code> does not exist or has been terminated.</p>
+  <h1>404 - Stagelet Not Found</h1>
+  <p>The preview stagelet <code>abc123</code> does not exist or has been terminated.</p>
   <p>If you believe this is an error, check the PR status on GitHub.</p>
 </body>
 </html>
@@ -316,18 +316,18 @@ Content-Type: text/html
 <head><title>Bad Gateway</title></head>
 <body>
   <h1>502 - Backend Unreachable</h1>
-  <p>The preview environment is not responding.</p>
+  <p>The preview stagelet is not responding.</p>
   <p>This could mean:</p>
   <ul>
     <li>The application is starting up (wait 30 seconds)</li>
     <li>The application crashed (check logs)</li>
   </ul>
-  <a href="https://dashboard.stagely.dev/environments/abc123">View Logs</a>
+  <a href="https://dashboard.stagely.dev/stagelets/abc123">View Logs</a>
 </body>
 </html>
 ```
 
-### 503: Environment Building
+### 503: Stagelet Building
 
 **Scenario:** `status` is `"building"` (not ready yet)
 
@@ -345,10 +345,10 @@ Retry-After: 30
   <meta http-equiv="refresh" content="10">
 </head>
 <body>
-  <h1>Your environment is being built...</h1>
+  <h1>Your stagelet is being built...</h1>
   <p>This usually takes 2-5 minutes.</p>
   <div class="spinner">⏳</div>
-  <p><a href="https://dashboard.stagely.dev/environments/abc123">View Build Logs</a></p>
+  <p><a href="https://dashboard.stagely.dev/stagelets/abc123">View Build Logs</a></p>
 </body>
 </html>
 ```
@@ -376,7 +376,7 @@ These provide context to the application running in the VM:
 X-Stagely-Hash: abc123
 X-Stagely-Project: api-backend
 X-Stagely-Team: acme-corp
-X-Stagely-Environment-ID: env_xk82j9s7
+X-Stagely-Stagelet-ID: env_xk82j9s7
 X-Stagely-PR: 42
 ```
 
@@ -437,9 +437,9 @@ if strings.HasPrefix(r.URL.Path, "/static/") {
 
 ## Rate Limiting
 
-### Per-Environment Rate Limit
+### Per-Stagelet Rate Limit
 
-Prevent abuse by limiting requests per environment:
+Prevent abuse by limiting requests per stagelet:
 
 ```go
 func (p *Proxy) RateLimit(hash string) bool {
@@ -768,7 +768,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) serve404(w http.ResponseWriter, r *http.Request, hash string) {
     w.WriteHeader(http.StatusNotFound)
-    fmt.Fprintf(w, "<h1>404 - Environment Not Found</h1><p>Hash: %s</p>", hash)
+    fmt.Fprintf(w, "<h1>404 - Stagelet Not Found</h1><p>Hash: %s</p>", hash)
 }
 
 func (p *Proxy) serveBuildingPage(w http.ResponseWriter, r *http.Request, hash string) {

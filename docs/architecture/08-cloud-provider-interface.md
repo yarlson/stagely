@@ -187,7 +187,7 @@ func (p *AWSProvider) CreateInstance(ctx context.Context, spec InstanceSpec) (st
             {
                 ResourceType: types.ResourceTypeInstance,
                 Tags: []types.Tag{
-                    {Key: aws.String("Name"), Value: aws.String("Stagely-" + spec.Tags["environment_id"])},
+                    {Key: aws.String("Name"), Value: aws.String("Stagely-" + spec.Tags["stagelet_id"])},
                     {Key: aws.String("ManagedBy"), Value: aws.String("Stagely")},
                 },
             },
@@ -364,14 +364,14 @@ func (p *DigitalOceanProvider) CreateInstance(ctx context.Context, spec Instance
     image := p.selectImage(spec.Architecture)
 
     createRequest := &godo.DropletCreateRequest{
-        Name:   "stagely-" + spec.Tags["environment_id"],
+        Name:   "stagely-" + spec.Tags["stagelet_id"],
         Region: spec.Region,
         Size:   size,
         Image: godo.DropletCreateImage{
             Slug: image,
         },
         UserData: spec.UserData,
-        Tags: []string{"stagely", "environment:" + spec.Tags["environment_id"]},
+        Tags: []string{"stagely", "stagelet:" + spec.Tags["stagelet_id"]},
     }
 
     droplet, _, err := p.client.Droplets.Create(ctx, createRequest)
@@ -495,14 +495,14 @@ func (p *HetznerProvider) CreateInstance(ctx context.Context, spec InstanceSpec)
     image := p.selectImage(spec.Architecture)
 
     createOpts := hcloud.ServerCreateOpts{
-        Name: "stagely-" + spec.Tags["environment_id"],
+        Name: "stagely-" + spec.Tags["stagelet_id"],
         ServerType: &hcloud.ServerType{Name: serverType},
         Image: &hcloud.Image{Name: image},
         Location: &hcloud.Location{Name: spec.Region},
         UserData: spec.UserData,
         Labels: map[string]string{
             "managed_by":     "stagely",
-            "environment_id": spec.Tags["environment_id"],
+            "stagelet_id": spec.Tags["stagelet_id"],
         },
     }
 
@@ -947,11 +947,11 @@ log.Info("provisioning VM",
 
 ## Cost Tracking
 
-Track estimated costs per environment:
+Track estimated costs per stagelet:
 
 ```go
-func (o *Orchestrator) EstimateCost(environmentID string) (float64, error) {
-    env, _ := o.DB.GetEnvironment(environmentID)
+func (o *Orchestrator) EstimateCost(stageletID string) (float64, error) {
+    env, _ := o.DB.GetStagelet(stageletID)
     provider, _ := o.GetProvider(env.CloudProviderID)
 
     hourlyRate, err := provider.GetPricing(context.Background(), env.Size, env.Region)

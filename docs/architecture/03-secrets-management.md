@@ -2,7 +2,7 @@
 
 ## Overview
 
-Stagely provides a hierarchical secrets management system that allows users to securely store environment variables and files, scoped to specific services or shared globally. Secrets are encrypted at rest, transmitted over TLS, and injected into containers at deployment time using Docker Compose overrides.
+Stagely provides a hierarchical secrets management system that allows users to securely store stagelet variables and files, scoped to specific services or shared globally. Secrets are encrypted at rest, transmitted over TLS, and injected into containers at deployment time using Docker Compose overrides.
 
 ## Design Principles
 
@@ -40,14 +40,14 @@ CREATE INDEX idx_secrets_project_scope ON secrets(project_id, scope);
 
 **Field Descriptions:**
 
-- `project_id`: Secrets belong to a project (not environment-specific)
+- `project_id`: Secrets belong to a project (not stagelet-specific)
 - `key`: Variable name (e.g., `DATABASE_URL`, `STRIPE_SECRET_KEY`)
 - `encrypted_value`: AES-256-GCM encrypted value
 - `scope`:
   - `global`: Injected into all services
   - `<service_name>`: Injected only into that service (e.g., `backend`, `frontend`)
 - `secret_type`:
-  - `env`: Environment variable
+  - `env`: Stagelet variable
   - `file`: Physical file written to disk
 - `file_path`: For `file` type, where to write it (e.g., `./config/firebase.json`)
 - `file_permissions`: For `file` type, octal permissions (e.g., `0600`)
@@ -119,13 +119,13 @@ func DecryptSecret(ciphertext string, key []byte) (string, error) {
 
 **Key Management:**
 
-Option 1 (Simple): Single master key stored in environment variable
+Option 1 (Simple): Single master key stored in stagelet variable
 ```bash
 STAGELY_SECRET_KEY=your-32-byte-base64-encoded-key
 ```
 
 Option 2 (Production): Use AWS KMS, Google Cloud KMS, or HashiCorp Vault
-- Store only the KMS key ID in the environment
+- Store only the KMS key ID in the stagelet
 - Call KMS API to decrypt data keys
 
 ### Access Control
@@ -187,21 +187,21 @@ services:
 version: '3'
 services:
   backend:
-    environment:
+    stagelet:
       - DATABASE_URL=postgres://user:pass@postgres:5432/db
       - REDIS_URL=redis://redis:6379
       - PORT=8080
       - STRIPE_SECRET_KEY=sk_test_abc123
 
   frontend:
-    environment:
+    stagelet:
       - DATABASE_URL=postgres://user:pass@postgres:5432/db
       - REDIS_URL=redis://redis:6379
       - PORT=3000
       - NEXT_PUBLIC_API_URL=https://api.example.com
 
   postgres:
-    environment:
+    stagelet:
       - DATABASE_URL=postgres://user:pass@postgres:5432/db
       - REDIS_URL=redis://redis:6379
 ```
@@ -257,7 +257,7 @@ type Secret struct {
 
 func GenerateOverride(services []string, secrets []Secret) string {
     type ServiceEnv struct {
-        Environment []string `yaml:"environment"`
+        Stagelet []string `yaml:"stagelet"`
     }
 
     override := map[string]interface{}{
@@ -269,7 +269,7 @@ func GenerateOverride(services []string, secrets []Secret) string {
 
     // Initialize each service
     for _, svc := range services {
-        serviceMap[svc] = ServiceEnv{Environment: []string{}}
+        serviceMap[svc] = ServiceEnv{Stagelet: []string{}}
     }
 
     // Inject secrets
@@ -282,14 +282,14 @@ func GenerateOverride(services []string, secrets []Secret) string {
             // Add to all services
             for svc := range serviceMap {
                 env := serviceMap[svc]
-                env.Environment = append(env.Environment,
+                env.Stagelet = append(env.Stagelet,
                     fmt.Sprintf("%s=%s", secret.Key, secret.Value))
                 serviceMap[svc] = env
             }
         } else {
             // Add only to specific service
             if env, ok := serviceMap[secret.Scope]; ok {
-                env.Environment = append(env.Environment,
+                env.Stagelet = append(env.Stagelet,
                     fmt.Sprintf("%s=%s", secret.Key, secret.Value))
                 serviceMap[secret.Scope] = env
             }
@@ -501,7 +501,7 @@ When a user updates a secret in the Dashboard:
 3. Core sends DEPLOY message to Agent (with updated secrets)
 4. Agent regenerates override file with new values
 5. Agent runs `docker compose up -d`
-6. Docker detects environment variable change
+6. Docker detects stagelet variable change
 7. Docker recreates only the affected containers (smart restart)
 
 **No manual intervention required.**
@@ -517,7 +517,7 @@ When a user updates a secret in the Dashboard:
 
 ### For End Users
 
-1. **Use Different Secrets Per Environment**: Don't reuse production secrets in preview envs
+1. **Use Different Secrets Per Stagelet**: Don't reuse production secrets in preview envs
 2. **Scope Secrets Tightly**: Use service-specific scope when possible (not `global`)
 3. **Rotate After Developer Offboarding**: Change secrets when team members leave
 4. **Never Commit `.env` Files**: Stagely injects them at runtime
@@ -597,7 +597,7 @@ Content-Type: application/json
 }
 ```
 
-**Side Effect:** All active environments for this project are automatically redeployed with the new secret.
+**Side Effect:** All active stagelets for this project are automatically redeployed with the new secret.
 
 ### Delete Secret
 
@@ -613,9 +613,9 @@ Authorization: Bearer <user_token>
 }
 ```
 
-## Environment Variables vs. Files
+## Stagelet Variables vs. Files
 
-### When to Use Environment Variables
+### When to Use Stagelet Variables
 
 - API keys
 - Database URLs
@@ -668,7 +668,7 @@ Authorization: Bearer <user_token>
 
 ### Issue: Secret Not Appearing in Container
 
-**Symptom:** Application can't read environment variable.
+**Symptom:** Application can't read stagelet variable.
 
 **Cause:** Typo in scope (e.g., `Scope: "Backend"` instead of `"backend"`)
 
@@ -712,7 +712,7 @@ func TestSecretMasking(t *testing.T) {
 
 1. Create a test project
 2. Add a secret via API
-3. Deploy a test environment
+3. Deploy a test stagelet
 4. Exec into container: `docker compose exec backend env | grep SECRET_KEY`
 5. Verify secret is present
 6. Update secret via API

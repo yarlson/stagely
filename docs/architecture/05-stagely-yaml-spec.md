@@ -63,7 +63,7 @@ builds:
 
 # Preview phase: How to run the built images
 preview:
-  size: "large" # VM size for the preview environment
+  size: "large" # VM size for the preview stagelet
 
   # Lifecycle hooks (run before opening traffic)
   lifecycle:
@@ -187,7 +187,7 @@ Stagely automatically configures `--cache-to` to push updated layers back.
 
 ## Section: `preview`
 
-Defines how to run the built images in the Preview environment.
+Defines how to run the built images in the Preview stagelet.
 
 ```yaml
 preview:
@@ -202,7 +202,7 @@ preview:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `size` | string | No | VM size for the preview environment (default: `medium`) |
+| `size` | string | No | VM size for the preview stagelet (default: `medium`) |
 | `lifecycle` | object | No | Hooks to run before traffic is enabled |
 
 ### VM Sizes (Preview)
@@ -248,12 +248,12 @@ lifecycle:
 
 **Important:**
 - Commands run in the context of the service's container
-- They have access to the same environment variables as the service
+- They have access to the same stagelet variables as the service
 - If a command takes >5 minutes, consider moving it to a background job
 
 ## Section: `test`
 
-Defines End-to-End (E2E) tests to run **after** the Preview environment is healthy.
+Defines End-to-End (E2E) tests to run **after** the Preview stagelet is healthy.
 
 ```yaml
 test:
@@ -279,7 +279,7 @@ test:
 | `machine` | string | No | VM size (default: `large` for browser-based tests) |
 | `commands` | list | Yes* | Shell commands to execute |
 | `artifacts` | list | No | File paths to save (reports, screenshots) |
-| `env` | map | No | Environment variables for test runner |
+| `env` | map | No | Stagelet variables for test runner |
 | `timeout` | string | No | Max test time (default: `30m`) |
 
 *Required if `enabled: true`
@@ -357,7 +357,7 @@ Stagely injects dynamic variables at runtime:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `${STAGELY_HASH}` | Unique environment ID | `br7x-9jq2` |
+| `${STAGELY_HASH}` | Unique stagelet ID | `br7x-9jq2` |
 | `${STAGELY_PREVIEW_URL}` | Full public URL | `https://br7x-9jq2.stagely.dev` |
 | `${COMMIT_HASH}` | Git commit SHA | `abc123def456` |
 | `${BRANCH}` | Git branch name | `feature/new-api` |
@@ -440,7 +440,7 @@ test:
 Artifacts are downloadable via Dashboard or API:
 
 ```http
-GET /api/v1/environments/:env_id/artifacts/report.json
+GET /api/v1/stagelets/:env_id/artifacts/report.json
 ```
 
 ### Conditional Builds

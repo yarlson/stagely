@@ -29,7 +29,7 @@ write_files:
         "agent_id": "agt_8jk2n9s7d6f5g4h3",
         "token": "sk_live_9s8d7f6g5h4j3k2l1m0n9b8v7c6x5z4",
         "core_url": "wss://api.stagely.dev/v1/agent/connect",
-        "environment_id": "env_xk82j9s7d6f5"
+        "stagelet_id": "env_xk82j9s7d6f5"
       }
 
 runcmd:
@@ -56,7 +56,7 @@ wss://api.stagely.dev/v1/agent/connect
   "version": "1.0.0",
   "agent_id": "agt_8jk2n9s7d6f5g4h3",
   "token": "sk_live_9s8d7f6g5h4j3k2l1m0n9b8v7c6x5z4",
-  "environment_id": "env_xk82j9s7d6f5",
+  "stagelet_id": "env_xk82j9s7d6f5",
   "system_info": {
     "hostname": "ip-10-0-1-42",
     "ip_address": "54.123.45.67",
@@ -260,16 +260,16 @@ Already shown above.
 version: '3'
 services:
   backend:
-    environment:
+    stagelet:
       - DATABASE_URL=postgres://user:pass@db.internal:5432/mydb
       - PORT=8080
       - STRIPE_SECRET_KEY=sk_test_...
   frontend:
-    environment:
+    stagelet:
       - DATABASE_URL=postgres://user:pass@db.internal:5432/mydb
       - PORT=3000
   postgres:
-    environment:
+    stagelet:
       - DATABASE_URL=postgres://user:pass@db.internal:5432/mydb
 ```
 
@@ -386,7 +386,7 @@ If Agent cannot reconnect for >15 minutes:
 2. Agent creates a marker file: `/var/lib/stagely/suicide_marker`
 3. Agent exits
 
-The Core's Reaper process will detect the stale environment and terminate the VM.
+The Core's Reaper process will detect the stale stagelet and terminate the VM.
 
 ### Core Shutdown/Restart
 
@@ -414,7 +414,7 @@ Agent responds with current STATUS message.
   ```json
   {
     "agent_id": "agt_...",
-    "environment_id": "env_...",
+    "stagelet_id": "env_...",
     "exp": 1733500800
   }
   ```

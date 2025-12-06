@@ -63,12 +63,12 @@ Stagely's build pipeline separates the "build" phase from the "run" phase to opt
 
 ### Workflow Run (Parent)
 
-A Workflow Run represents the entire lifecycle of a PR environment.
+A Workflow Run represents the entire lifecycle of a PR stagelet.
 
 ```sql
 CREATE TABLE workflow_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    environment_id UUID NOT NULL REFERENCES environments(id) ON DELETE CASCADE,
+    stagelet_id UUID NOT NULL REFERENCES stagelets(id) ON DELETE CASCADE,
     trigger VARCHAR(50) NOT NULL, -- 'pr_opened', 'pr_synchronized', 'manual'
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -84,7 +84,7 @@ CREATE TABLE workflow_runs (
     ))
 );
 
-CREATE INDEX idx_workflow_runs_env ON workflow_runs(environment_id);
+CREATE INDEX idx_workflow_runs_env ON workflow_runs(stagelet_id);
 CREATE INDEX idx_workflow_runs_status ON workflow_runs(status);
 ```
 
@@ -163,7 +163,7 @@ func (o *Orchestrator) HandlePROpened(pr PullRequest) error {
     }
 
     // 2. Create workflow run
-    workflowRun := o.DB.CreateWorkflowRun(pr.EnvironmentID, "pr_opened")
+    workflowRun := o.DB.CreateWorkflowRun(pr.StageletID, "pr_opened")
 
     // 3. Create build jobs (fan-out)
     var jobs []BuildJob
@@ -673,14 +673,14 @@ If `backend` builds successfully but `frontend` fails:
 - Core does NOT provision Preview VM (incomplete build)
 - User must fix frontend and push again
 
-**Rationale:** We don't deploy partial environments (confusing and error-prone).
+**Rationale:** We don't deploy partial stagelets (confusing and error-prone).
 
 ### Retry Strategy
 
 Users can manually trigger a rebuild:
 
 ```http
-POST /api/v1/environments/:env_id/rebuild
+POST /api/v1/stagelets/:env_id/rebuild
 ```
 
 Core creates a new workflow run and re-executes from scratch.
@@ -784,7 +784,7 @@ provider.CreateInstance(MachineSpec{
 ## Future Enhancements
 
 1. **Build Matrix Testing**: Build multiple variants (Node 18, Node 20, Node 22) in parallel
-2. **Custom Builders**: Allow users to provide their own Dockerfile for the build environment
+2. **Custom Builders**: Allow users to provide their own Dockerfile for the build stagelet
 3. **Build Artifact Caching**: Cache `node_modules`, Go vendor, etc. across builds
 4. **Build Sharding**: Split large monorepo builds into sub-builds
 5. **ARM64 Support Detection**: Auto-detect if provider supports ARM, skip if not
