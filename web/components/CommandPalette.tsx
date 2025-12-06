@@ -55,7 +55,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChange }) =
 			name: "PR #38: refactor/components",
 			project: "Frontend App",
 		},
-		{ id: "env_789", name: "PR #55: fix/memory-leak", project: "Worker Service" },
+		{
+			id: "env_789",
+			name: "PR #55: fix/memory-leak",
+			project: "Worker Service",
+		},
 	];
 
 	const projects = [
