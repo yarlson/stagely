@@ -33,7 +33,7 @@ func main() {
 	// Phase 0 complete - server starts in Phase 2
 	fmt.Printf(`
 ╔═══════════════════════════════════════════╗
-║   Stagely Core - Phase 0 Foundation      ║
+║   Stagely Core - Phase 0 Foundation       ║
 ║                                           ║
 ║   Status: ✅ Database Connected           ║
 ║   Status: ✅ Configuration Loaded         ║
