@@ -1,0 +1,5 @@
+{
+	"name": "Stagely Dashboard",
+	"description": "A self-hosted ephemeral stagelet platform dashboard for managing preview stagelets.",
+	"requestFramePermissions": []
+}
