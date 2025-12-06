@@ -194,7 +194,7 @@ web/src/
 
 ```go
 // go.mod
-module github.com/stagely/stagely
+module github.com/stagely-dev/stagely
 
 go 1.22
 

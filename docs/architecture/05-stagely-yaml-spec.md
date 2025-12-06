@@ -693,5 +693,5 @@ This enables autocomplete and inline validation.
 For questions or issues with `stagely.yaml`:
 
 - Documentation: https://docs.stagely.dev
-- GitHub Issues: https://github.com/stagely/stagely/issues
+- GitHub Issues: https://github.com/stagely-dev/stagely/issues
 - Discord: https://discord.gg/stagely
