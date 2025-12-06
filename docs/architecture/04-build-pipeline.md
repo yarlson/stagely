@@ -51,11 +51,11 @@ Stagely's build pipeline separates the "build" phase from the "run" phase to opt
 
 ### Cost Comparison
 
-| Fleet | Instance Type | Cost/Hour | Typical Runtime | Cost/Build |
-|-------|--------------|-----------|-----------------|------------|
-| Builder | c5.xlarge (4vCPU, 8GB) | $0.17 | 10 min | $0.03 |
-| Preview | t3.medium (2vCPU, 4GB) | $0.04 | 4 hours | $0.16 |
-| Tester | c5.2xlarge (8vCPU, 16GB) | $0.34 | 15 min | $0.09 |
+| Fleet   | Instance Type            | Cost/Hour | Typical Runtime | Cost/Build |
+| ------- | ------------------------ | --------- | --------------- | ---------- |
+| Builder | c5.xlarge (4vCPU, 8GB)   | $0.17     | 10 min          | $0.03      |
+| Preview | t3.medium (2vCPU, 4GB)   | $0.04     | 4 hours         | $0.16      |
+| Tester  | c5.2xlarge (8vCPU, 16GB) | $0.34     | 15 min          | $0.09      |
 
 **Total cost per PR:** ~$0.28 (assuming single-arch build)
 
@@ -238,9 +238,7 @@ When a Builder VM boots:
     "build_args": {
       "NODE_ENV": "staging"
     },
-    "cache_from": [
-      "registry.internal/proj-123/cache:backend"
-    ],
+    "cache_from": ["registry.internal/proj-123/cache:backend"],
     "cache_to": "registry.internal/proj-123/cache:backend"
   },
   "registry_auth": {
@@ -514,11 +512,11 @@ docker buildx build \
 
 ### Performance Impact
 
-| Build Type | Without Cache | With Cache | Speedup |
-|------------|---------------|------------|---------|
-| Fresh clone | 8 min | 8 min | 1x |
-| No code changes | 8 min | 30 sec | 16x |
-| Changed 1 file | 8 min | 2 min | 4x |
+| Build Type      | Without Cache | With Cache | Speedup |
+| --------------- | ------------- | ---------- | ------- |
+| Fresh clone     | 8 min         | 8 min      | 1x      |
+| No code changes | 8 min         | 30 sec     | 16x     |
+| Changed 1 file  | 8 min         | 2 min      | 4x      |
 
 ## Cloud Provider Mapping
 
@@ -588,10 +586,12 @@ docker buildx build --platform linux/arm64 ...
 ```
 
 **Performance:**
+
 - Native ARM64: 100% speed
 - QEMU Emulation: 10-30% speed (10x slower)
 
 **When to use:**
+
 - Prototyping: QEMU is fine
 - Production: Always use native builders
 

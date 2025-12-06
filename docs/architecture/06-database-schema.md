@@ -3,6 +3,7 @@
 ## Overview
 
 Stagely uses PostgreSQL as its primary database. The schema is designed for:
+
 - Hierarchical multi-tenancy (Teams → Projects → Stagelets)
 - Tracking ephemeral infrastructure lifecycle
 - Audit logging
@@ -12,6 +13,7 @@ Stagely uses PostgreSQL as its primary database. The schema is designed for:
 **Database Version:** PostgreSQL 14+
 
 **Required Extensions:**
+
 - `uuid-ossp` (UUID generation)
 - `pgcrypto` (encryption functions - optional if using application-layer encryption)
 
@@ -138,6 +140,7 @@ COMMENT ON TABLE team_members IS 'User membership in teams with role-based acces
 ```
 
 **Roles:**
+
 - `owner`: Full control, can delete team
 - `admin`: Manage projects, billing, members
 - `member`: Create stagelets, view secrets
@@ -474,6 +477,7 @@ COMMENT ON TABLE audit_logs IS 'Audit trail for all sensitive operations';
 ```
 
 **Example Events:**
+
 - `secret.created`
 - `secret.updated`
 - `secret.deleted`
@@ -831,6 +835,7 @@ DELETE FROM teams WHERE slug LIKE 'test-%';
 ## Documentation
 
 For each table, document:
+
 - Purpose
 - Relationships
 - Indexes

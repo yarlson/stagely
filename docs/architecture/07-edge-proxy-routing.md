@@ -248,6 +248,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 **TTL:** 1 hour (refreshed by Agent heartbeat every 30s)
 
 **Why TTL?**
+
 - If Agent dies, the route expires automatically
 - No manual cleanup required
 - Prevents routing to dead backends
@@ -387,7 +388,7 @@ Your application can read these headers to customize behavior:
 ```javascript
 // In your Node.js app
 app.use((req, res, next) => {
-  const prNumber = req.headers['x-stagely-pr'];
+  const prNumber = req.headers["x-stagely-pr"];
   if (prNumber) {
     console.log(`This request is for PR #${prNumber}`);
   }
@@ -881,6 +882,7 @@ wrk -t12 -c400 -d30s https://abc123.stagely.dev/
 **Symptom:** Requests take >500ms
 
 **Debug:**
+
 ```bash
 # Check Redis latency
 redis-cli --latency
@@ -896,6 +898,7 @@ curl -w "%{time_total}\n" -o /dev/null -s http://54.1.2.3:3000/
 **Symptom:** Backend unreachable
 
 **Debug:**
+
 ```bash
 # Check if backend VM is running
 ssh user@54.1.2.3

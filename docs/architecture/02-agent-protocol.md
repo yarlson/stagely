@@ -22,7 +22,7 @@ When Stagely Core provisions a VM, it injects a startup script:
 #cloud-config
 write_files:
   - path: /etc/stagely/config.json
-    permissions: '0600'
+    permissions: "0600"
     owner: root:root
     content: |
       {
@@ -45,11 +45,13 @@ Agent boots → Reads /etc/stagely/config.json → Opens WebSocket connection
 ```
 
 **WebSocket URL:**
+
 ```
 wss://api.stagely.dev/v1/agent/connect
 ```
 
 **Handshake Request (Agent → Core):**
+
 ```json
 {
   "type": "HELLO",
@@ -70,6 +72,7 @@ wss://api.stagely.dev/v1/agent/connect
 **Handshake Response (Core → Agent):**
 
 Success:
+
 ```json
 {
   "type": "HELLO_ACK",
@@ -80,6 +83,7 @@ Success:
 ```
 
 Failure:
+
 ```json
 {
   "type": "ERROR",
@@ -102,9 +106,11 @@ Once connected, the Agent enters a loop:
 ### Agent → Core Messages
 
 #### 1. HELLO (Connection Initialization)
+
 Already shown above.
 
 #### 2. HEARTBEAT (Keep-Alive)
+
 ```json
 {
   "type": "HEARTBEAT",
@@ -123,6 +129,7 @@ Already shown above.
 ```
 
 **Core Response:**
+
 ```json
 {
   "type": "HEARTBEAT_ACK"
@@ -130,6 +137,7 @@ Already shown above.
 ```
 
 #### 3. LOG (Streaming Output)
+
 ```json
 {
   "type": "LOG",
@@ -141,11 +149,13 @@ Already shown above.
 ```
 
 **Fields:**
+
 - `stream`: "stdout" or "stderr"
 - `data`: Raw log line (newline-terminated)
 - `job_id`: Links log to specific job
 
 #### 4. STATUS (State Report)
+
 ```json
 {
   "type": "STATUS",
@@ -180,12 +190,14 @@ Already shown above.
 ```
 
 **State Values:**
+
 - `pending`: Job received but not started
 - `running`: Job in progress
 - `completed`: Job finished successfully (exit_code: 0)
 - `failed`: Job finished with error (exit_code: non-zero)
 
 #### 5. ERROR (Execution Failure)
+
 ```json
 {
   "type": "ERROR",
@@ -209,9 +221,11 @@ Already shown above.
 ### Core → Agent Messages
 
 #### 1. HELLO_ACK (Connection Acknowledgment)
+
 Already shown above.
 
 #### 2. DEPLOY (Deploy Command)
+
 ```json
 {
   "type": "DEPLOY",
@@ -257,7 +271,7 @@ Already shown above.
 2. Agent generates `docker-compose.stagely.yml` override file:
 
 ```yaml
-version: '3'
+version: "3"
 services:
   backend:
     stagelet:
@@ -301,9 +315,7 @@ For Builder VMs only (not Preview VMs):
     "build_args": {
       "NODE_ENV": "staging"
     },
-    "cache_from": [
-      "registry.internal/project-123/cache:backend"
-    ],
+    "cache_from": ["registry.internal/project-123/cache:backend"],
     "cache_to": "registry.internal/project-123/cache:backend"
   },
   "registry_auth": {
@@ -332,6 +344,7 @@ For Builder VMs only (not Preview VMs):
 4. Report STATUS: completed (with artifact URL) or failed
 
 #### 4. TERMINATE (Shutdown Command)
+
 ```json
 {
   "type": "TERMINATE",
@@ -350,6 +363,7 @@ For Builder VMs only (not Preview VMs):
 The VM itself is terminated by the Cloud Provider API (Agent does not self-destruct the VM).
 
 #### 5. PING (Connection Test)
+
 ```json
 {
   "type": "PING"
@@ -357,6 +371,7 @@ The VM itself is terminated by the Cloud Provider API (Agent does not self-destr
 ```
 
 **Agent Response:**
+
 ```json
 {
   "type": "PONG",
@@ -382,6 +397,7 @@ If the WebSocket connection drops (network issue, Core restart):
 
 **Suicide Mechanism:**
 If Agent cannot reconnect for >15 minutes:
+
 1. Agent stops all containers: `docker compose down`
 2. Agent creates a marker file: `/var/lib/stagely/suicide_marker`
 3. Agent exits

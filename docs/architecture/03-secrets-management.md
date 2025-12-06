@@ -120,11 +120,13 @@ func DecryptSecret(ciphertext string, key []byte) (string, error) {
 **Key Management:**
 
 Option 1 (Simple): Single master key stored in stagelet variable
+
 ```bash
 STAGELY_SECRET_KEY=your-32-byte-base64-encoded-key
 ```
 
 Option 2 (Production): Use AWS KMS, Google Cloud KMS, or HashiCorp Vault
+
 - Store only the KMS key ID in the stagelet
 - Call KMS API to decrypt data keys
 
@@ -144,6 +146,7 @@ WHERE p.id = $1 AND tm.user_id = $2;
 ### The Problem
 
 Different services in a `docker-compose.yml` may need:
+
 - Different values for the same key (e.g., `PORT=8080` for backend, `PORT=3000` for frontend)
 - Access to different secrets (e.g., `STRIPE_SECRET_KEY` only in backend, not frontend)
 
@@ -154,8 +157,9 @@ Generate a temporary `docker-compose.stagely.yml` file that Docker merges with t
 ### Example
 
 **User's `docker-compose.yml`:**
+
 ```yaml
-version: '3'
+version: "3"
 services:
   backend:
     image: my-api
@@ -173,18 +177,19 @@ services:
 
 **Secrets in Stagely Dashboard:**
 
-| Key | Value | Scope | Type |
-|-----|-------|-------|------|
-| DATABASE_URL | postgres://user:pass@postgres:5432/db | global | env |
-| REDIS_URL | redis://redis:6379 | global | env |
-| PORT | 8080 | backend | env |
-| PORT | 3000 | frontend | env |
-| STRIPE_SECRET_KEY | sk_test_abc123 | backend | env |
-| NEXT_PUBLIC_API_URL | https://api.example.com | frontend | env |
+| Key                 | Value                                 | Scope    | Type |
+| ------------------- | ------------------------------------- | -------- | ---- |
+| DATABASE_URL        | postgres://user:pass@postgres:5432/db | global   | env  |
+| REDIS_URL           | redis://redis:6379                    | global   | env  |
+| PORT                | 8080                                  | backend  | env  |
+| PORT                | 3000                                  | frontend | env  |
+| STRIPE_SECRET_KEY   | sk_test_abc123                        | backend  | env  |
+| NEXT_PUBLIC_API_URL | https://api.example.com               | frontend | env  |
 
 **Agent-Generated `docker-compose.stagely.yml`:**
+
 ```yaml
-version: '3'
+version: "3"
 services:
   backend:
     stagelet:
@@ -207,11 +212,13 @@ services:
 ```
 
 **Execution:**
+
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.stagely.yml up -d
 ```
 
 **Result:**
+
 - `backend` gets PORT=8080 and STRIPE_SECRET_KEY
 - `frontend` gets PORT=3000 and NEXT_PUBLIC_API_URL
 - `postgres` gets only global secrets
@@ -424,6 +431,7 @@ func WriteFileSecret(secret Secret) error {
 ```
 
 **Important:** File secrets are written to disk (unavoidable). The Agent must:
+
 - Write them to a directory outside the Git repo (to avoid accidental commits)
 - Delete them on cleanup or VM termination
 
@@ -483,11 +491,13 @@ for scanner.Scan() {
 **Example:**
 
 Before masking:
+
 ```
 Connecting to postgres://user:mypassword@db:5432/mydb
 ```
 
 After masking:
+
 ```
 Connecting to ***REDACTED***
 ```
@@ -540,6 +550,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "id": "sec_xk82j9s7",
@@ -560,6 +571,7 @@ Authorization: Bearer <user_token>
 ```
 
 **Response:**
+
 ```json
 {
   "secrets": [
@@ -588,6 +600,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "id": "sec_xk82j9s7",
@@ -607,6 +620,7 @@ Authorization: Bearer <user_token>
 ```
 
 **Response:**
+
 ```json
 {
   "status": "deleted"
@@ -662,6 +676,7 @@ Authorization: Bearer <user_token>
 **Cause:** New secret value is malformed (e.g., invalid JSON, wrong format).
 
 **Solution:**
+
 1. Check logs: Agent sends last 20 lines to Core
 2. Rollback: Revert secret to previous value in Dashboard
 3. Core automatically redeploys with old value
@@ -673,6 +688,7 @@ Authorization: Bearer <user_token>
 **Cause:** Typo in scope (e.g., `Scope: "Backend"` instead of `"backend"`)
 
 **Solution:**
+
 1. Check scope matches service name exactly (case-sensitive)
 2. Update scope in Dashboard
 3. Redeploy (Core sends new DEPLOY message)
@@ -684,6 +700,7 @@ Authorization: Bearer <user_token>
 **Cause:** Secret masking failed (secret value too short, or contains special regex chars).
 
 **Solution:**
+
 1. Update masking regex to escape special characters
 2. Set minimum secret length (e.g., 8 characters) to avoid false positives
 
@@ -722,7 +739,7 @@ func TestSecretMasking(t *testing.T) {
 ## Performance Considerations
 
 - **Encryption Overhead**: Negligible (< 1ms per secret)
-- **Override File Generation**: O(n * m) where n = services, m = secrets (typically < 10ms)
+- **Override File Generation**: O(n \* m) where n = services, m = secrets (typically < 10ms)
 - **Docker Compose Merge**: Native Docker operation (< 100ms)
 - **Secret Lookup**: Database query with index (< 5ms)
 

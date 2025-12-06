@@ -15,6 +15,7 @@ version: 2
 ```
 
 **Versioning Policy:**
+
 - Major version changes indicate breaking schema changes
 - Minor version changes add optional fields (backward-compatible)
 - Stagely Core rejects configs with unsupported major versions
@@ -105,15 +106,15 @@ builds:
 
 **Fields:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `context` | string | Yes | Path to build context (relative to repo root) |
-| `dockerfile` | string | No | Path to Dockerfile (default: `{context}/Dockerfile`) |
-| `platform` | string | Yes | Target platform: `linux/amd64` or `linux/arm64` |
-| `machine` | string | No | VM size: `small`, `medium`, `large` (default: `medium`) |
-| `build_args` | map | No | Build-time variables (passed to `docker build --build-arg`) |
-| `cache_from` | list | No | Docker registry URLs to use as cache sources |
-| `timeout` | string | No | Max build time (default: `30m`, format: `10m`, `1h`, `90s`) |
+| Field        | Type   | Required | Description                                                 |
+| ------------ | ------ | -------- | ----------------------------------------------------------- |
+| `context`    | string | Yes      | Path to build context (relative to repo root)               |
+| `dockerfile` | string | No       | Path to Dockerfile (default: `{context}/Dockerfile`)        |
+| `platform`   | string | Yes      | Target platform: `linux/amd64` or `linux/arm64`             |
+| `machine`    | string | No       | VM size: `small`, `medium`, `large` (default: `medium`)     |
+| `build_args` | map    | No       | Build-time variables (passed to `docker build --build-arg`) |
+| `cache_from` | list   | No       | Docker registry URLs to use as cache sources                |
+| `timeout`    | string | No       | Max build time (default: `30m`, format: `10m`, `1h`, `90s`) |
 
 ### Multi-Architecture Build
 
@@ -132,6 +133,7 @@ builds:
 **Result:** Stagely provisions two VMs (one AMD64, one ARM64), builds both, and merges them into a single manifest list.
 
 **Notes:**
+
 - Cannot specify `platform` and `platforms` simultaneously (use one or the other)
 - `machine` size applies to all platform builds
 - Build time is determined by the slowest architecture
@@ -174,13 +176,14 @@ Stagely automatically configures `--cache-to` to push updated layers back.
 
 ### Machine Sizes
 
-| Size | vCPU | RAM | Typical Use Case |
-|------|------|-----|------------------|
-| small | 2 | 4 GB | Go/Rust builds |
-| medium | 4 | 8 GB | Node.js/Python |
-| large | 8 | 16 GB | Heavy webpack, multi-stage builds |
+| Size   | vCPU | RAM   | Typical Use Case                  |
+| ------ | ---- | ----- | --------------------------------- |
+| small  | 2    | 4 GB  | Go/Rust builds                    |
+| medium | 4    | 8 GB  | Node.js/Python                    |
+| large  | 8    | 16 GB | Heavy webpack, multi-stage builds |
 
 **Cost Implications:**
+
 - Small: ~$0.02 per 10-minute build
 - Medium: ~$0.03 per 10-minute build
 - Large: ~$0.06 per 10-minute build
@@ -200,19 +203,19 @@ preview:
 
 **Fields:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `size` | string | No | VM size for the preview stagelet (default: `medium`) |
-| `lifecycle` | object | No | Hooks to run before traffic is enabled |
+| Field       | Type   | Required | Description                                          |
+| ----------- | ------ | -------- | ---------------------------------------------------- |
+| `size`      | string | No       | VM size for the preview stagelet (default: `medium`) |
+| `lifecycle` | object | No       | Hooks to run before traffic is enabled               |
 
 ### VM Sizes (Preview)
 
-| Size | vCPU | RAM | Disk | Cost/Hour |
-|------|------|-----|------|-----------|
-| small | 2 | 2 GB | 25 GB | ~$0.02 |
-| medium | 2 | 4 GB | 50 GB | ~$0.04 |
-| large | 4 | 8 GB | 80 GB | ~$0.08 |
-| xlarge | 8 | 16 GB | 160 GB | ~$0.16 |
+| Size   | vCPU | RAM   | Disk   | Cost/Hour |
+| ------ | ---- | ----- | ------ | --------- |
+| small  | 2    | 2 GB  | 25 GB  | ~$0.02    |
+| medium | 2    | 4 GB  | 50 GB  | ~$0.04    |
+| large  | 4    | 8 GB  | 80 GB  | ~$0.08    |
+| xlarge | 8    | 16 GB | 160 GB | ~$0.16    |
 
 ### Lifecycle Hooks
 
@@ -232,6 +235,7 @@ lifecycle:
 ```
 
 **Execution Order:**
+
 1. Agent runs `docker compose up -d`
 2. Agent waits for all containers to report "healthy"
 3. Agent executes each `on_start` command sequentially
@@ -241,12 +245,14 @@ lifecycle:
    - Error logs are sent to user
 
 **Use Cases:**
+
 - Database migrations
 - Cache warming
 - Data seeding
 - Index creation
 
 **Important:**
+
 - Commands run in the context of the service's container
 - They have access to the same stagelet variables as the service
 - If a command takes >5 minutes, consider moving it to a background job
@@ -272,17 +278,17 @@ test:
 
 **Fields:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `enabled` | bool | No | Whether to run tests (default: `false`) |
-| `image` | string | Yes* | Docker image to run tests in |
-| `machine` | string | No | VM size (default: `large` for browser-based tests) |
-| `commands` | list | Yes* | Shell commands to execute |
-| `artifacts` | list | No | File paths to save (reports, screenshots) |
-| `env` | map | No | Stagelet variables for test runner |
-| `timeout` | string | No | Max test time (default: `30m`) |
+| Field       | Type   | Required | Description                                        |
+| ----------- | ------ | -------- | -------------------------------------------------- |
+| `enabled`   | bool   | No       | Whether to run tests (default: `false`)            |
+| `image`     | string | Yes\*    | Docker image to run tests in                       |
+| `machine`   | string | No       | VM size (default: `large` for browser-based tests) |
+| `commands`  | list   | Yes\*    | Shell commands to execute                          |
+| `artifacts` | list   | No       | File paths to save (reports, screenshots)          |
+| `env`       | map    | No       | Stagelet variables for test runner                 |
+| `timeout`   | string | No       | Max test time (default: `30m`)                     |
 
-*Required if `enabled: true`
+\*Required if `enabled: true`
 
 ### Test Workflow
 
@@ -320,7 +326,7 @@ In your Playwright config:
 // playwright.config.js
 export default {
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || "http://localhost:3000",
   },
 };
 ```
@@ -355,14 +361,14 @@ Or configure via Dashboard per-project.
 
 Stagely injects dynamic variables at runtime:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `${STAGELY_HASH}` | Unique stagelet ID | `br7x-9jq2` |
-| `${STAGELY_PREVIEW_URL}` | Full public URL | `https://br7x-9jq2.stagely.dev` |
-| `${COMMIT_HASH}` | Git commit SHA | `abc123def456` |
-| `${BRANCH}` | Git branch name | `feature/new-api` |
-| `${PR_NUMBER}` | GitHub PR number | `42` |
-| `${PROJECT_ID}` | Stagely project ID | `proj_xk82j9s7` |
+| Variable                 | Description        | Example                         |
+| ------------------------ | ------------------ | ------------------------------- |
+| `${STAGELY_HASH}`        | Unique stagelet ID | `br7x-9jq2`                     |
+| `${STAGELY_PREVIEW_URL}` | Full public URL    | `https://br7x-9jq2.stagely.dev` |
+| `${COMMIT_HASH}`         | Git commit SHA     | `abc123def456`                  |
+| `${BRANCH}`              | Git branch name    | `feature/new-api`               |
+| `${PR_NUMBER}`           | GitHub PR number   | `42`                            |
+| `${PROJECT_ID}`          | Stagely project ID | `proj_xk82j9s7`                 |
 
 **Usage Example:**
 
@@ -499,6 +505,7 @@ version: 1 # Unsupported version
 ```
 
 **Error:**
+
 ```
 stagely.yaml validation failed: unsupported version '1' (supported: 2)
 ```
@@ -512,6 +519,7 @@ builds:
 ```
 
 **Error:**
+
 ```
 stagely.yaml validation failed: builds.app.context is required
 ```
@@ -526,6 +534,7 @@ builds:
 ```
 
 **Error:**
+
 ```
 stagely.yaml validation failed: builds.app.platform must be 'linux/amd64' or 'linux/arm64'
 ```
@@ -566,6 +575,7 @@ CMD ["npm", "start"]
 ```
 
 **Rationale for Change:**
+
 - V1 was too opinionated (required specific build tooling)
 - V2 embraces Docker (universal standard)
 - V2 supports multi-arch and caching natively
