@@ -4,9 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stagely-dev/stagely/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/stagely-dev/stagely/internal/config"
 )
 
 func TestLoad_Success(t *testing.T) {
@@ -56,7 +57,7 @@ func TestLoad_DefaultValues(t *testing.T) {
 
 	// Then
 	require.NoError(t, err)
-	assert.Equal(t, 8080, cfg.Server.Port)           // default
+	assert.Equal(t, 8080, cfg.Server.Port)                 // default
 	assert.Equal(t, "development", cfg.Server.Environment) // default
-	assert.Equal(t, "info", cfg.Server.LogLevel)     // default
+	assert.Equal(t, "info", cfg.Server.LogLevel)           // default
 }
