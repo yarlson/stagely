@@ -76,6 +76,7 @@ All quality gates passed on every commit:
 ### ✅ Task 1: Project Initialization
 
 **Files created:**
+
 - `go.mod` - Go module definition
 - `Makefile` - Build automation with 12 targets
 - `docker-compose.yml` - PostgreSQL and Redis containers
@@ -89,10 +90,12 @@ All quality gates passed on every commit:
 ### ✅ Task 2: Configuration Module
 
 **Files created:**
+
 - `internal/config/config.go` - Viper-based config loader
 - `internal/config/config_test.go` - 3 test cases
 
 **Features:**
+
 - Environment variable loading
 - Sensible defaults (port 8080, log level info)
 - Validation for required fields (DATABASE_URL, REDIS_URL)
@@ -107,10 +110,12 @@ All quality gates passed on every commit:
 ### ✅ Task 3: NanoID Utility
 
 **Files created:**
+
 - `pkg/nanoid/nanoid.go` - NanoID generation
 - `pkg/nanoid/nanoid_test.go` - 4 test cases
 
 **Features:**
+
 - 12-character default ID length
 - Lowercase alphanumeric alphabet (URL-safe)
 - Collision resistance (1 in 10^21 for 1M IDs)
@@ -125,10 +130,12 @@ All quality gates passed on every commit:
 ### ✅ Task 4: Encryption Module
 
 **Files created:**
+
 - `internal/crypto/encrypt.go` - AES-256-GCM encryption
 - `internal/crypto/encrypt_test.go` - 7 test cases
 
 **Features:**
+
 - AES-256-GCM authenticated encryption (AEAD)
 - Random nonce per encryption (semantic security)
 - Base64 encoding for database storage
@@ -143,10 +150,12 @@ All quality gates passed on every commit:
 ### ✅ Task 5: Database Connection
 
 **Files created:**
+
 - `internal/db/db.go` - GORM connection factory
 - `internal/db/db_test.go` - 3 test cases (2 integration tests)
 
 **Features:**
+
 - Connection pooling (25 max connections, 5 idle)
 - UTC timestamps by default
 - Health check function for readiness probes
@@ -161,6 +170,7 @@ All quality gates passed on every commit:
 ### ✅ Task 6: Core Table Migrations
 
 **Files created:**
+
 - `migrations/001_create_teams.sql`
 - `migrations/002_create_users.sql`
 - `migrations/003_create_team_members.sql`
@@ -168,6 +178,7 @@ All quality gates passed on every commit:
 - `migrations/005_create_cloud_providers.sql`
 
 **Schema highlights:**
+
 - Multi-tenant model (teams as top-level tenant)
 - OAuth user authentication (GitHub, Google)
 - Role-based access control (owner, admin, member, viewer)
@@ -182,12 +193,14 @@ All quality gates passed on every commit:
 ### ✅ Task 7: Environment and Workflow Migrations
 
 **Files created:**
+
 - `migrations/006_create_environments.sql`
 - `migrations/007_create_workflow_runs.sql`
 - `migrations/008_create_build_jobs.sql`
 - `migrations/009_create_build_logs.sql`
 
 **Schema highlights:**
+
 - Ephemeral preview environments (formerly "stagelets")
 - Build/deploy/test pipeline tracking
 - Individual build task management
@@ -201,6 +214,7 @@ All quality gates passed on every commit:
 ### ✅ Task 8: Secrets and Audit Migrations
 
 **Files created:**
+
 - `migrations/010_create_secrets.sql`
 - `migrations/011_create_audit_logs.sql`
 - `migrations/012_create_agent_connections.sql`
@@ -208,6 +222,7 @@ All quality gates passed on every commit:
 - `migrations/014_create_functions.sql`
 
 **Schema highlights:**
+
 - Encrypted secrets with scope support (global or per-service)
 - Comprehensive audit trail for compliance
 - WebSocket agent connection tracking
@@ -222,10 +237,12 @@ All quality gates passed on every commit:
 ### ✅ Task 11: Main Entry Point and README
 
 **Files created:**
+
 - `cmd/core/main.go` - Core API entry point
 - `README.md` - Project documentation
 
 **Features:**
+
 - Configuration loading with error handling
 - Database connection with health check
 - Graceful failure with clear error messages
@@ -261,20 +278,20 @@ The following tasks were intentionally deferred as they are not required for Pha
 
 The complete database schema includes 12 core tables:
 
-| Table | Purpose | Key Features |
-|-------|---------|--------------|
-| `teams` | Multi-tenant organization | Billing plans, quotas, soft delete |
-| `users` | User accounts | OAuth (GitHub/Google), email verification |
-| `team_members` | User-team relationships | RBAC with 4 roles |
-| `projects` | Git repository config | Repo URL, cloud provider, JSONB config |
-| `cloud_providers` | Encrypted cloud credentials | AES-256-GCM encrypted JSON |
-| `environments` | Preview environments | Subdomain hash, VM tracking, heartbeat |
-| `workflow_runs` | Build pipeline tracking | Trigger types, timing, results |
-| `build_jobs` | Individual builds | Architecture, VM, artifact URL |
-| `build_logs` | Real-time build output | Stdout/stderr streaming |
-| `secrets` | Encrypted secrets | Scope-based, env vars or files |
-| `audit_logs` | Compliance audit trail | Actor, action, resource tracking |
-| `agent_connections` | WebSocket state | Agent ID, token hash, system info |
+| Table               | Purpose                     | Key Features                              |
+| ------------------- | --------------------------- | ----------------------------------------- |
+| `teams`             | Multi-tenant organization   | Billing plans, quotas, soft delete        |
+| `users`             | User accounts               | OAuth (GitHub/Google), email verification |
+| `team_members`      | User-team relationships     | RBAC with 4 roles                         |
+| `projects`          | Git repository config       | Repo URL, cloud provider, JSONB config    |
+| `cloud_providers`   | Encrypted cloud credentials | AES-256-GCM encrypted JSON                |
+| `environments`      | Preview environments        | Subdomain hash, VM tracking, heartbeat    |
+| `workflow_runs`     | Build pipeline tracking     | Trigger types, timing, results            |
+| `build_jobs`        | Individual builds           | Architecture, VM, artifact URL            |
+| `build_logs`        | Real-time build output      | Stdout/stderr streaming                   |
+| `secrets`           | Encrypted secrets           | Scope-based, env vars or files            |
+| `audit_logs`        | Compliance audit trail      | Actor, action, resource tracking          |
+| `agent_connections` | WebSocket state             | Agent ID, token hash, system info         |
 
 **Total indexes:** 35
 **Total constraints:** 42
@@ -288,6 +305,7 @@ The complete database schema includes 12 core tables:
 
 **Decision:** Write SQL migrations before GORM models
 **Rationale:**
+
 - Ensures schema is explicitly defined and version-controlled
 - Avoids GORM auto-migration surprises in production
 - Migrations are the source of truth for schema changes
@@ -300,6 +318,7 @@ The complete database schema includes 12 core tables:
 
 **Decision:** Write tests before implementation (RED-GREEN-REFACTOR)
 **Rationale:**
+
 - Ensures tests actually verify behavior
 - Catches bugs early
 - Provides immediate feedback on API design
@@ -312,6 +331,7 @@ The complete database schema includes 12 core tables:
 
 **Decision:** Run build, lint, and test before every commit
 **Rationale:**
+
 - Prevents broken code from entering the repository
 - Maintains high code quality
 - Catches integration issues early
@@ -324,6 +344,7 @@ The complete database schema includes 12 core tables:
 
 **Decision:** Use testcontainers-go for database integration tests
 **Rationale:**
+
 - Real PostgreSQL instance ensures behavior matches production
 - Isolated test environment per test run
 - No external dependencies or shared state
@@ -380,6 +401,7 @@ export REDIS_URL="redis://localhost:6379/0"
 ```
 
 Expected output:
+
 ```
 ✅ Database Connected
 ✅ Configuration Loaded
