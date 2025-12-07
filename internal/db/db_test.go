@@ -30,6 +30,7 @@ func TestConnect_Integration(t *testing.T) {
 				"POSTGRES_DB":       "test",
 			},
 			WaitingFor: wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2). // Wait for second occurrence (after recovery)
 				WithStartupTimeout(60 * time.Second),
 		},
 		Started: true,
@@ -80,6 +81,7 @@ func TestHealthCheck_Integration(t *testing.T) {
 				"POSTGRES_DB":       "test",
 			},
 			WaitingFor: wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2). // Wait for second occurrence (after recovery)
 				WithStartupTimeout(60 * time.Second),
 		},
 		Started: true,
