@@ -22,8 +22,11 @@
 
 **Estimated Timeline:**
 
-- Phase 0: 16 hours
-- Phase 1: 20 hours
+- Phase 0: 16 hours ✅ COMPLETE
+- Phase 1A: 4 hours (Interface + Mock + Registry)
+- Phase 1B: 6 hours (AWS Provider)
+- Phase 1C: 5 hours (DigitalOcean Provider)
+- Phase 1D: 5 hours (Hetzner Provider)
 - Phase 2: 24 hours
 - Phase 3: 20 hours
 - Phase 4: 24 hours
@@ -105,26 +108,23 @@ Create Go project structure following the standard layout with `cmd/`, `internal
 
 ---
 
-## Phase 1: Cloud Provider Interface and Implementations
+## Phase 1A: Cloud Provider Interface and Mock Implementation
 
 **Problem Statement:**
 Stagely needs to provision VMs across multiple cloud providers (AWS, DigitalOcean, Hetzner) with different APIs and instance types. Without a unified abstraction, the core orchestrator would need provider-specific logic, making it difficult to add new providers or maintain existing ones.
 
 **Solution Overview:**
-Define a `CloudProvider` interface in Go that abstracts VM lifecycle operations (CreateInstance, GetInstanceStatus, TerminateInstance). Implement this interface for three providers: AWS (using aws-sdk-go-v2), DigitalOcean (using godo), and Hetzner (using hcloud-go). Create a provider registry for dynamic provider instantiation. Handle architecture mapping (amd64/arm64 to provider-specific instance types).
+Define a `CloudProvider` interface in Go that abstracts VM lifecycle operations (CreateInstance, GetInstanceStatus, TerminateInstance). Implement a mock provider for testing and a provider registry for dynamic provider instantiation. This phase establishes the foundation before implementing real cloud providers.
 
 **Success Criteria:**
 
 - ✅ `CloudProvider` interface defined with all required methods
-- ✅ AWS provider implementation complete (EC2 instance management)
-- ✅ DigitalOcean provider implementation complete (Droplet management)
-- ✅ Hetzner provider implementation complete (Server management)
-- ✅ Provider registry working (dynamic provider instantiation by name)
-- ✅ Architecture mapping (amd64→t3.small, arm64→t4g.small, etc.)
-- ✅ Credential encryption/decryption for stored provider configs
 - ✅ Instance size mapping (small/medium/large → provider types)
-- ✅ All provider integration tests passing
-- ✅ Mock provider implementation for testing
+- ✅ Architecture mapping (amd64/arm64 constants)
+- ✅ Mock provider implementation for testing (in-memory, no API calls)
+- ✅ Provider registry working (dynamic provider instantiation by name)
+- ✅ All mock provider tests passing
+- ✅ Thread-safe provider cache in registry
 
 **Implementation Details:**
 
@@ -158,39 +158,17 @@ Define a `CloudProvider` interface in Go that abstracts VM lifecycle operations 
   }
   ```
 
-- Create `internal/providers/aws.go`:
-  - Implement using aws-sdk-go-v2/service/ec2
-  - Map sizes: small→t3.small, medium→c5.xlarge, large→c5.2xlarge
-  - Map ARM: small→t4g.small, medium→c6g.xlarge, large→c6g.2xlarge
-  - Handle spot instance requests
-  - Wait for public IP assignment (polling with timeout)
-  - Select AMI based on architecture (Ubuntu 22.04 AMD64/ARM64)
-- Create `internal/providers/digitalocean.go`:
-  - Implement using github.com/digitalocean/godo
-  - Map sizes: small→s-2vcpu-4gb, medium→c-4, large→c-8
-  - Note: DigitalOcean doesn't support ARM64 (use AMD64 with QEMU warning)
-  - Wait for droplet to get public IP
-  - Use ubuntu-22-04-x64 image
-- Create `internal/providers/hetzner.go`:
-  - Implement using github.com/hetznercloud/hcloud-go
-  - Map sizes: small→cx21, medium→cx31, large→cx41
-  - Map ARM: small→cax11, medium→cax21, large→cax31
-  - Hetzner returns IP immediately (no polling needed)
+- Create `internal/providers/mock.go`:
+  - In-memory mock for testing
+  - Simulates provisioning delays with configurable duration
+  - Tracks instances in memory map
+  - No actual API calls
+  - Support all CloudProvider interface methods
 - Create `internal/providers/registry.go`:
   - Provider registration system
   - Factory pattern for creating providers from credentials
-  - Thread-safe provider cache
-- Create `internal/providers/mock.go`:
-  - In-memory mock for testing
-  - Simulates provisioning delays
-  - No actual API calls
-- Update `internal/models/cloud_provider.go`:
-  - Add methods for encrypting/decrypting credentials
-  - Validate provider type enum
-- Add SDK dependencies to `go.mod`:
-  - `github.com/aws/aws-sdk-go-v2`
-  - `github.com/digitalocean/godo`
-  - `github.com/hetznercloud/hcloud-go/v2`
+  - Thread-safe provider cache using sync.RWMutex
+  - Register() and Get() methods
 
 **Dependencies:**
 
@@ -198,19 +176,156 @@ Define a `CloudProvider` interface in Go that abstracts VM lifecycle operations 
 
 **Testing Strategy:**
 
-- Unit tests for instance type selection logic (size+arch → instance type)
-- Unit tests for provider registry (registration, retrieval)
-- Integration tests for each provider (requires cloud credentials in env):
-  - Create instance → verify instanceID and IP returned
-  - Get instance status → verify state and IP
-  - Terminate instance → verify deletion
-  - Validate credentials → test auth failure handling
-- Mock provider tests (no cloud API calls):
-  - Simulate all operations
-  - Test error conditions (quota exceeded, invalid region)
-- Edge cases: Invalid credentials, network timeouts, quota exceeded, invalid regions
+- Unit tests for provider registry (registration, retrieval, thread safety)
+- Unit tests for mock provider:
+  - CreateInstance → returns valid instance ID and IP
+  - GetInstanceStatus → returns correct state
+  - TerminateInstance → removes from memory
+  - ValidateCredentials → always succeeds
+  - GetPricing → returns mock pricing
+- Edge cases: Concurrent registry access, invalid instance IDs, duplicate registrations
 
-**Estimated Effort:** 20 hours
+**Estimated Effort:** 4 hours
+
+---
+
+## Phase 1B: AWS Provider Implementation
+
+**Problem Statement:**
+Need to provision EC2 instances on AWS with proper instance type selection, AMI selection based on architecture, spot instance support, and IP polling.
+
+**Solution Overview:**
+Implement the CloudProvider interface for AWS using aws-sdk-go-v2/service/ec2. Map generic sizes to EC2 instance types, handle architecture-specific AMI selection, support spot instances, and poll for public IP assignment.
+
+**Success Criteria:**
+
+- ✅ AWS provider implements CloudProvider interface
+- ✅ Instance type mapping (small→t3.small/t4g.small, medium→c5.xlarge/c6g.xlarge, large→c5.2xlarge/c6g.2xlarge)
+- ✅ AMI selection based on architecture (Ubuntu 22.04 AMD64/ARM64)
+- ✅ Spot instance support
+- ✅ Public IP polling with timeout
+- ✅ All AWS provider tests passing
+- ✅ Integration test with mocked AWS SDK
+
+**Implementation Details:**
+
+- Create `internal/providers/aws.go`:
+  - Implement using aws-sdk-go-v2/service/ec2
+  - Map sizes: small→t3.small, medium→c5.xlarge, large→c5.2xlarge
+  - Map ARM: small→t4g.small, medium→c6g.xlarge, large→c6g.2xlarge
+  - Handle spot instance requests
+  - Wait for public IP assignment (polling with timeout)
+  - Select AMI based on architecture (Ubuntu 22.04 AMD64/ARM64)
+- Add AWS SDK dependency to `go.mod`:
+  - `github.com/aws/aws-sdk-go-v2`
+  - `github.com/aws/aws-sdk-go-v2/service/ec2`
+  - `github.com/aws/aws-sdk-go-v2/config`
+
+**Dependencies:**
+
+- Phase 1A (CloudProvider interface, registry)
+
+**Testing Strategy:**
+
+- Unit tests for instance type selection (size+arch → EC2 type)
+- Unit tests for AMI selection (arch → AMI ID)
+- Integration tests with mocked EC2 client:
+  - CreateInstance → verify RunInstances called with correct params
+  - GetInstanceStatus → verify DescribeInstances called
+  - TerminateInstance → verify TerminateInstances called
+- Edge cases: Invalid region, quota exceeded, network timeouts
+
+**Estimated Effort:** 6 hours
+
+---
+
+## Phase 1C: DigitalOcean Provider Implementation
+
+**Problem Statement:**
+Need to provision Droplets on DigitalOcean with size mapping and IP polling.
+
+**Solution Overview:**
+Implement the CloudProvider interface for DigitalOcean using godo SDK. Map generic sizes to DigitalOcean slugs, poll for droplet public IP, use Ubuntu 22.04 image.
+
+**Success Criteria:**
+
+- ✅ DigitalOcean provider implements CloudProvider interface
+- ✅ Instance size mapping (small→s-2vcpu-4gb, medium→c-4, large→c-8)
+- ✅ Public IP polling with timeout
+- ✅ Ubuntu 22.04 image selection
+- ✅ All DigitalOcean provider tests passing
+- ✅ Integration test with mocked godo client
+
+**Implementation Details:**
+
+- Create `internal/providers/digitalocean.go`:
+  - Implement using github.com/digitalocean/godo
+  - Map sizes: small→s-2vcpu-4gb, medium→c-4, large→c-8
+  - Note: DigitalOcean doesn't support ARM64 (return error or use AMD64 with warning)
+  - Wait for droplet to get public IP
+  - Use ubuntu-22-04-x64 image
+- Add DigitalOcean SDK dependency to `go.mod`:
+  - `github.com/digitalocean/godo`
+
+**Dependencies:**
+
+- Phase 1A (CloudProvider interface, registry)
+
+**Testing Strategy:**
+
+- Unit tests for size mapping
+- Integration tests with mocked godo client:
+  - CreateInstance → verify Droplets.Create called
+  - GetInstanceStatus → verify Droplets.Get called
+  - TerminateInstance → verify Droplets.Delete called
+- Edge cases: ARM64 requested (should error), invalid token, network timeouts
+
+**Estimated Effort:** 5 hours
+
+---
+
+## Phase 1D: Hetzner Provider Implementation
+
+**Problem Statement:**
+Need to provision servers on Hetzner Cloud with size/architecture mapping.
+
+**Solution Overview:**
+Implement the CloudProvider interface for Hetzner using hcloud-go SDK. Map generic sizes to Hetzner server types (including ARM-specific CAX types), use immediate IP availability.
+
+**Success Criteria:**
+
+- ✅ Hetzner provider implements CloudProvider interface
+- ✅ Instance size mapping (small→cx21, medium→cx31, large→cx41)
+- ✅ ARM instance mapping (small→cax11, medium→cax21, large→cax31)
+- ✅ Immediate IP availability (no polling needed)
+- ✅ All Hetzner provider tests passing
+- ✅ Integration test with mocked hcloud client
+
+**Implementation Details:**
+
+- Create `internal/providers/hetzner.go`:
+  - Implement using github.com/hetznercloud/hcloud-go
+  - Map sizes: small→cx21, medium→cx31, large→cx41
+  - Map ARM: small→cax11, medium→cax21, large→cax31
+  - Hetzner returns IP immediately (no polling needed)
+  - Use Ubuntu 22.04 image
+- Add Hetzner SDK dependency to `go.mod`:
+  - `github.com/hetznercloud/hcloud-go/v2`
+
+**Dependencies:**
+
+- Phase 1A (CloudProvider interface, registry)
+
+**Testing Strategy:**
+
+- Unit tests for size+architecture mapping
+- Integration tests with mocked hcloud client:
+  - CreateInstance → verify Server.Create called
+  - GetInstanceStatus → verify Server.Get called
+  - TerminateInstance → verify Server.Delete called
+- Edge cases: Invalid API token, network timeouts, invalid region
+
+**Estimated Effort:** 5 hours
 
 ---
 
