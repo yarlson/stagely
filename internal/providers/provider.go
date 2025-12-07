@@ -14,7 +14,7 @@ type CloudProvider interface {
 
 	// CreateInstance provisions a new VM with the given specification
 	// Returns instanceID and publicIP (or error if provisioning fails)
-	CreateInstance(ctx context.Context, spec InstanceSpec) (instanceID string, publicIP string, error)
+	CreateInstance(ctx context.Context, spec InstanceSpec) (instanceID string, publicIP string, err error)
 
 	// GetInstanceStatus returns the current status of an instance
 	GetInstanceStatus(ctx context.Context, instanceID string) (InstanceStatus, error)
